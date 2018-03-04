@@ -11,8 +11,9 @@ Deploy Prometheus stack into your project of Openshift using APB
 - Prometheus Stack
   - registry.access.redhat.com/openshift3/oauth-proxy:v3.7
   - registry.access.redhat.com/openshift3/prometheus:v3.7
-  - registry.access.redhat.com/openshift3/prometheus-alert-buffer:v3.7
   - registry.access.redhat.com/openshift3/prometheus-alertmanager:v3.7
+- Add-Ons
+  - registry.access.redhat.com/openshift3/prometheus-alert-buffer:v3.7
 
 ## How to try it?
 
