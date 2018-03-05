@@ -72,6 +72,14 @@ plans:
         title: Deploy Grafana server with Prometheus as datasource
         display_group: Grafana Config
 
+      ## Alertbuffer Params 
+      - name: DEPLOY_ALERTBUFFER
+        required: True
+        default: True
+        type: bool
+        title: Deploy Alertbuffer server with Prometheus.
+        display_group: Alertbuffer Config
+
 
   - name: persistent
     description: Deployment of Prometheus for metrics and data view
@@ -107,6 +115,12 @@ plans:
         default: 10
         type: number
         title: Prometheus Grafana Storage Size (Gb)
+        display_group: Container Specs
+      - name: PROMETHEUS_ALERTBUFFER_STORAGE_SIZE
+        required: True
+        default: 10
+        type: number
+        title: Prometheus Alertbuffer Storage Size (Gb)
         display_group: Container Specs
 
       ## AlertManager Params
@@ -153,3 +167,11 @@ plans:
         type: bool
         title: Deploy Grafana server with Prometheus as datasource
         display_group: Grafana Config
+
+      ## Alertbuffer Params 
+      - name: DEPLOY_ALERTBUFFER
+        required: True
+        default: True
+        type: bool
+        title: Deploy Alertbuffer server with Prometheus.
+        display_group: Alertbuffer Config

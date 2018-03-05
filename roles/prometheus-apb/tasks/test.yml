@@ -9,6 +9,7 @@
     scheme: 'https'
   when: PROMETHEUS_SECURED_DEPLOYMENT | bool
 
+# Test for Prometheus
 - name: "[PROMETHEUS APB][{{ mode | upper }}] Check the Prometheus server is accesible"
   uri:
     url: "{{ scheme }}://{{ prometheus_svc.service.spec.cluster_ip }}"
@@ -26,7 +27,24 @@
     msg: "Test Failed. Error connecting with Prometheus Server. Data - {{ webpage }}"
   when: webpage.failed | bool
 
-- name: "[PROMETHEUS-GRAFANA-APB][{{ mode | upper }}] Check the Grafana server is accesible"
+# Test for Alertmanager
+- name: "[PROMETHEUS APB][{{ mode | upper }}] Ensure that Alertmanager is up"
+  wait_for:
+    port: "{{ prometheus_alermanager_port }}" 
+    host: "{{ service_name_am }}"
+    timeout: 20               
+  register: alertmanager_conn       
+  when: state == "present"
+  
+- name: "[PROMETHEUS APB][{{ mode | upper }}] Saving Tests results on error"
+  asb_save_test_result:
+    fail: True
+    msg: "Test Failed. Error connecting with Alertmanager Server. Data - {{ alertmanager_conn }}"
+  when: 
+    - alertmanager_conn.failed | bool
+
+# Test for Grafana
+- name: "[PROMETHEUS APB][{{ mode | upper }}] Check the Grafana server is accesible"
   uri:
     url: "{{ scheme }}://{{ prometheus_grafana_svc.service.spec.cluster_ip }}"
     return_content: yes
@@ -41,7 +59,25 @@
 - name: "[PROMETHEUS APB][{{ mode | upper }}] Saving Tests results on error"
   asb_save_test_result:
     fail: True
-    msg: "Test Failed. Error connecting with Prometheus Server. Data - {{ webpage }}"
+    msg: "Test Failed. Error connecting to Grafana Server. Data - {{ grafana }}"
   when:
-    - webpage.failed | bool
+    - grafana.failed | bool
     - DEPLOY_GRAFANA | bool
+
+# Test for Alertbuffer
+- name: "[PROMETHEUS APB][{{ mode | upper }}] Ensure that Alertbuffer is up"
+  wait_for:
+    port: "{{ prometheus_alertbuffer_port }}" 
+    host: "{{ service_name_ab_proxy }}"
+    timeout: 20               
+  register: alertbuffer_conn       
+  when: state == "present"
+  
+- name: "[PROMETHEUS APB][{{ mode | upper }}] Saving Tests results on error"
+  asb_save_test_result:
+    fail: True
+    msg: "Test Failed. Error connecting with Alertbuffer Server. Data - {{ alertbuffer_conn }}"
+  when: 
+    - alertbuffer_conn.failed | bool
+    - DEPLOY_ALERTBUFFER | bool
+

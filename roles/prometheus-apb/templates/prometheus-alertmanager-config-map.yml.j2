@@ -72,3 +72,9 @@ receivers:
 - name: 'team-DB-pager'
   pagerduty_configs:
   - service_key: <team-DB-key>
+
+{% if DEPLOY_ALERTBUFFER | bool %}
+- name: alert-buffer-wh
+  webhook_configs:
+  - url: http://{{ service_name_ab }}:{{ prometheus_alertbuffer_port }}/topics/alerts
+{% endif %}

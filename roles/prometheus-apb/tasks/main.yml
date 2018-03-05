@@ -22,6 +22,10 @@
   - name: "[PROMETHEUS APB][MAIN] Deploying Prometheus-Grafana"
     include_tasks: prometheus-grafana-oauth.yml
     when: DEPLOY_GRAFANA | bool
+
+  - name: "[PROMETHEUS APB][MAIN] Deploying Prometheus-Alertbuffer"
+    include_tasks: prometheus-alertbuffer-oauth.yml
+    when: DEPLOY_ALERTBUFFER | bool
   when: mode == 'provision'
 
 - block:

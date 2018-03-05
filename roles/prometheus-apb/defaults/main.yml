@@ -37,7 +37,6 @@ prometheus_alertmanager_pvc_name: "{{ service_name_am }}-claim"
 
 ## Grafana
 service_name_graf: "{{ service_name }}-grafana"
-#prometheus_grafana_image: 'docker.io/grafana/grafana'
 prometheus_grafana_image: 'docker.io/mrsiano/grafana-ocp'
 prometheus_grafana_version: 'latest'
 prometheus_grafana_configmap_name: "{{ service_name_graf }}-config-map"
@@ -71,7 +70,20 @@ prometheus_grafana_datasource_payload:
     token: "{{ item.token | default('') }}"
 
 ## AlertBuffer
+service_name_ab: "{{ service_name }}-alertbuffer"
 prometheus_alertbuffer_image: 'registry.access.redhat.com/openshift3/prometheus-alert-buffer'
 prometheus_alertbuffer_version: 'latest'
+prometheus_alertbuffer_data_volume_name: "{{ service_name_ab }}-data"
+prometheus_alertbuffer_port: 9099
+prometheus_alertbuffer_data_pvc_name: "{{ service_name_ab }}-data-claim"
 
-
+## AlertBuffer Oauth-Proxy
+service_name_ab_proxy: "{{ service_name_ab }}-proxy"
+prometheus_alertbuffer_proxy_image: 'registry.access.redhat.com/openshift3/oauth-proxy'
+prometheus_alertbuffer_proxy_version: 'latest'
+prometheus_alertbuffer_proxy_container_port: 8443
+prometheus_alertbuffer_proxy_svc_port: 443
+prometheus_alertbuffer_proxy_tls_secret_name: "{{ service_name_ab_proxy }}-tls"
+prometheus_alertbuffer_proxy_configmap_oauth_name: "{{ service_name_ab_proxy }}-oauth-configmap"
+prometheus_alertbuffer_proxy_tls_skip_verify: 'true'
+prometheus_alertbuffer_proxy_cookie_secret: 'SECRET'

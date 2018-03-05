@@ -1,0 +1,281 @@
+---
+- name: '[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set variables to renderize templates'
+  set_fact:
+    resource_name: "{{ service_name_ab_proxy }}" 
+    resource_kind: 'Route'
+    proxy_container_port: "{{ prometheus_alertbuffer_proxy_container_port }}"
+    upstream_port: "{{ prometheus_alertbuffer_port }}"
+
+- name: '[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Renderize template of Service Account'
+  template:
+    src: 'prometheus-oauth-service-account.yml.j2'
+    dest: '/tmp/prometheus-oauth-service-account.yml'
+  register: prometheus_sa_file
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} Alertbuffer ServiceAccount"
+  k8s_v1_service_account:
+    state: "{{ state }}"
+    name: "{{ service_name_ab_proxy }}"
+    namespace: "{{ namespace }}"
+    src: '/tmp/prometheus-oauth-service-account.yml'
+  register: prometheus_alertbuffer_sa
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} ImageStream for Alertbuffer image"
+  openshift_v1_image_stream:
+    state: "{{ state }}"
+    name: "{{ item.name }}"
+    namespace: "{{ namespace }}"
+    labels:
+      app: "{{ service_name }}"
+      service: "{{ item.name }}"
+    lookup_policy_local: False 
+    tags:
+      - name: "{{ item.tag_name }}"
+    docker_image_repository: "{{ item.image }}"
+  with_items:
+    - { name: "{{ service_name_ab }}", image: "{{ prometheus_alertbuffer_image }}", tag_name: "{{ prometheus_alertbuffer_version }}"  }
+    - { name: "{{ service_name_ab_proxy }}", image: "{{ prometheus_alertbuffer_proxy_image }}", tag_name: "{{ prometheus_alertbuffer_proxy_version }}"  }
+  register: prometheus_alertbuffer_is
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Recover secret name"
+  set_fact:
+    prometheus_alertbuffer_sa_token_name: "{{ item.name }}"
+  with_list: "{{ prometheus_alertbuffer_sa.service_account.secrets }}"
+  when: "'prometheus-alertbuffer-proxy-token' in item.name"
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Recovering Service Account token"
+  k8s_v1_secret:
+    state: "{{ state }}"
+    name: "{{ prometheus_alertbuffer_sa_token_name }}"
+    namespace: "{{ namespace }}"
+  register: prometheus_alertbuffer_sa_token
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Creating a fact with the secret token of Service Account"
+  set_fact:
+    prometheus_alertbuffer_sa_token: "{{ prometheus_alertbuffer_sa_token.secret.data.token | b64decode }}"
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} RoleBinding for Service Account"
+  k8s_v1beta1_role_binding:
+    state: "{{ state }}"
+    name: "{{ service_name_ab_proxy }}-view"
+    namespace: "{{ namespace }}"
+    role_ref_name: view
+    role_ref_kind: ClusterRole
+    subjects:
+    - kind: ServiceAccount
+      name: "{{ service_name_ab_proxy }}"
+      namespace: "{{ namespace }}"
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} Oauth-Proxy ConfigMap resource"
+  k8s_v1_config_map:
+    state: "{{ state }}"
+    name: "{{ prometheus_alertbuffer_proxy_configmap_oauth_name }}"
+    namespace: "{{ namespace }}"
+    labels:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    resource_definition:
+      kind: 'ConfigMap'
+      apiVersion: 'v1'
+      metadata:
+        name: "{{ prometheus_alertbuffer_proxy_configmap_oauth_name }}"
+        namespace: "{{ namespace }}"
+      data:
+        prometheus-alertbuffer-oauth-proxy.yml: "{{ lookup('template', 'prometheus-oauth-proxy-config-map.yml.j2') }}"
+  register: prometheus_alertbuffer_oauth_cm
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} Alertbuffer PVC for Persistent plan"
+  k8s_v1_persistent_volume_claim:
+    state: "{{ state }}"
+    name: "{{ prometheus_alertbuffer_data_pvc_name }}"
+    namespace: "{{ namespace }}"
+    labels:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    access_modes:
+      - ReadWriteOnce
+    resources_requests:
+      storage: "{{ PROMETHEUS_ALERTBUFFER_STORAGE_SIZE }}Gi"
+  register: prometheus_alertbuffer_pvc
+  when: _apb_plan_id == 'persistent'
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} Alertbuffer Service"
+  k8s_v1_service:
+    state: "{{ state }}"
+    name: "{{ service_name_ab_proxy }}"
+    namespace: "{{ namespace }}"
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: "{{ prometheus_alertbuffer_proxy_tls_secret_name }}"
+    labels:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    selector:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    ports:
+    - name: "{{ service_name_ab_proxy }}-{{ prometheus_alertbuffer_proxy_svc_port }}"
+      port: "{{ prometheus_alertbuffer_proxy_svc_port }}"
+      target_port: "{{ prometheus_alertbuffer_proxy_container_port }}"
+  register: prometheus_alertbuffer_svc
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} Alertbuffer Route"
+  openshift_v1_route:
+    state: "{{ state }}"
+    name: "{{ service_name_ab_proxy }}"
+    namespace: '{{ namespace }}'
+    labels:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    to_name: "{{ service_name_ab_proxy }}"
+    port_target_port: "{{ service_name_ab_proxy }}-{{ prometheus_alertbuffer_proxy_svc_port }}"
+    tls_termination: 'reencrypt'
+  register: prometheus_alertbuffer_route
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} the Alertbuffer Deployment Config for Persistent plan"
+  openshift_v1_deployment_config:
+    state: "{{ state }}"
+    name: "{{ service_name_ab_proxy }}"
+    namespace: "{{ namespace }}"
+    labels:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    replicas: 1
+    selector:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    spec_template_metadata_labels:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    spec_template_spec_service_account_name: "{{ service_name_ab_proxy }}"
+    containers:
+      ## Oauth-Proxy DC
+      - name: "{{ service_name_ab_proxy }}"
+        image: "{{ prometheus_alertbuffer_proxy_image }}:{{ prometheus_alertbuffer_proxy_version }}"
+        ports:
+        - container_port: "{{ prometheus_alertbuffer_proxy_container_port }}"
+          protocol: TCP
+        args:
+          - --provider=openshift
+          - --openshift-service-account={{ service_name_ab_proxy }}
+          - --config=/{{ service_name_ab_proxy }}/prometheus-alertbuffer-oauth-proxy.yml
+          - --openshift-sar={"namespace":"{{ namespace }}","resource":"deploymentconfigs","name":"{{ service_name_ab }}","verb":"update"}
+          - --skip-auth-regex=^/metrics,/api/datasources,/api/dashboards
+        volume_mounts:
+          - mount_path: '/etc/tls/private'
+            name: "{{ prometheus_alertbuffer_proxy_tls_secret_name }}"
+          - mount_path: '/{{ service_name_ab_proxy }}'
+            name: "{{ prometheus_alertbuffer_proxy_configmap_oauth_name }}"
+      ## Alertbuffer
+      - name: "{{ service_name_ab }}"
+        image: "{{ prometheus_alertbuffer_image }}:{{ prometheus_alertbuffer_version }}"
+        imagePullPolicy: Always
+        ports:
+        - container_port: "{{ prometheus_alertbuffer_port }}"
+          protocol: TCP
+        args:
+          - --storage-path=/{{ service_name_ab }}/messages.db
+        volume_mounts:
+          - mount_path: "/{{ service_name_ab }}"
+            name: "{{ prometheus_alertbuffer_data_volume_name }}"
+        liveness_probe:
+          initial_delay_seconds: 30
+          tcp_socket:
+            port: "{{ prometheus_alertbuffer_port }}"
+          timeout_seconds: 1
+        readiness_probe:
+          initial_delay_seconds: 30
+          tcp_socket:
+            port: "{{ prometheus_alertbuffer_port }}"
+          timeout_seconds: 1
+          period_seconds: 10
+    volumes:
+      - name: "{{ prometheus_alertbuffer_data_volume_name }}"
+        persistent_volume_claim:
+          claim_name: "{{ prometheus_alertbuffer_data_pvc_name }}"
+      - name: "{{ prometheus_alertbuffer_proxy_configmap_oauth_name }}"
+        config_map:
+          name: "{{ prometheus_alertbuffer_proxy_configmap_oauth_name }}"
+      - name: "{{ prometheus_alertbuffer_proxy_tls_secret_name }}"
+        secret:
+          secret_name: "{{ prometheus_alertbuffer_proxy_tls_secret_name }}"
+    restart_policy: Always
+    termination_grace_period_seconds: 30
+    test: false
+    triggers:
+      - type: ConfigChange
+  register: prometheus_alertbuffer_dc
+  when: _apb_plan_id == 'persistent'
+
+- name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} the Prometheus Deployment Config for Ephemeral plan"
+  openshift_v1_deployment_config:
+    state: "{{ state }}"
+    name: "{{ service_name_ab_proxy }}"
+    namespace: "{{ namespace }}"
+    labels:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    replicas: 1
+    selector:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    spec_template_metadata_labels:
+      app: "{{ service_name }}"
+      service: "{{ service_name_ab_proxy }}"
+    spec_template_spec_service_account_name: "{{ service_name_ab_proxy }}"
+    containers:
+      ## Oauth-Proxy DC
+      - name: "{{ service_name_ab_proxy }}"
+        image: "{{ prometheus_alertbuffer_proxy_image }}:{{ prometheus_alertbuffer_proxy_version }}"
+        ports:
+        - container_port: "{{ prometheus_alertbuffer_proxy_container_port }}"
+          protocol: TCP
+        args:
+          - --provider=openshift
+          - --openshift-service-account={{ service_name_ab_proxy }}
+          - --config=/{{ service_name_ab_proxy }}/prometheus-alerbuffer-oauth-proxy.yml
+          - --openshift-sar={"namespace":"{{ namespace }}","resource":"deploymentconfigs","name":"{{ service_name_ab }}","verb":"update"}
+          - --skip-auth-regex=^/metrics,/api/datasources,/api/dashboards
+        volume_mounts:
+          - mount_path: '/etc/tls/private'
+            name: "{{ prometheus_alertbuffer_proxy_tls_secret_name }}"
+          - mount_path: '/{{ service_name_ab_proxy }}'
+            name: "{{ prometheus_alertbuffer_proxy_configmap_oauth_name }}"
+      ## Alertbuffer DC
+      - name: "{{ service_name_ab }}"
+        image: "{{ prometheus_alertbuffer_image }}:{{ prometheus_alertbuffer_version }}"
+        imagePullPolicy: Always
+        ports:
+        - container_port: "{{ prometheus_alertbuffer_port }}"
+          protocol: TCP
+        args:
+          - --storage-path=/{{ service_name_ab }}/messages.db
+        volume_mounts:
+          - mount_path: "/{{ service_name_ab }}"
+            name: "{{ prometheus_alertbuffer_data_volume_name }}"
+        liveness_probe:
+          initial_delay_seconds: 30
+          tcp_socket:
+            port: "{{ prometheus_alertbuffer_port }}"
+          timeout_seconds: 1
+        readiness_probe:
+          initial_delay_seconds: 30
+          tcp_socket:
+            port: "{{ prometheus_alertbuffer_port }}"
+          timeout_seconds: 1
+          period_seconds: 10
+    volumes:
+      - name: "{{ prometheus_alertbuffer_data_volume_name }}"
+        emptyDir: {}
+      - name: "{{ prometheus_alertbuffer_proxy_configmap_oauth_name }}"
+        config_map:
+          name: "{{ prometheus_alertbuffer_proxy_configmap_oauth_name }}"
+      - name: "{{ prometheus_alertbuffer_proxy_tls_secret_name }}"
+        secret:
+          secret_name: "{{ prometheus_alertbuffer_proxy_tls_secret_name }}"
+    restart_policy: Always
+    termination_grace_period_seconds: 30
+    test: false
+    triggers:
+      - type: ConfigChange
+  register: prometheus_alertbuffer_dc
+  when: _apb_plan_id == 'ephemeral'
