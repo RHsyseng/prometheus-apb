@@ -1,5 +1,5 @@
 ---
-- name: "[PROMETHEUS-APB][MAIN] MongoDB"
+- name: "[PROMETHEUS-APB][MAIN] Entrypoint"
   debug:
     msg:
       - "Entering on Main:"

@@ -1,8 +1,10 @@
 ---
 - name: '[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set variables to renderize templates'
   set_fact:
+    # Service Account
     resource_name: "{{ service_name_ab_proxy }}" 
     resource_kind: 'Route'
+    # Oauth-Proxy
     proxy_container_port: "{{ prometheus_alertbuffer_proxy_container_port }}"
     upstream_port: "{{ prometheus_alertbuffer_port }}"
 
@@ -10,7 +12,7 @@
   template:
     src: 'prometheus-oauth-service-account.yml.j2'
     dest: '/tmp/prometheus-oauth-service-account.yml'
-  register: prometheus_sa_file
+  register: prometheus_alertbuffer_sa_file
 
 - name: "[PROMETHEUS-ALERTBUFFER-OAUTH][{{ mode | upper }}] Set to {{ state }} Alertbuffer ServiceAccount"
   k8s_v1_service_account:
@@ -159,7 +161,6 @@
           - --openshift-service-account={{ service_name_ab_proxy }}
           - --config=/{{ service_name_ab_proxy }}/prometheus-alertbuffer-oauth-proxy.yml
           - --openshift-sar={"namespace":"{{ namespace }}","resource":"deploymentconfigs","name":"{{ service_name_ab }}","verb":"update"}
-          - --skip-auth-regex=^/metrics,/api/datasources,/api/dashboards
         volume_mounts:
           - mount_path: '/etc/tls/private'
             name: "{{ prometheus_alertbuffer_proxy_tls_secret_name }}"
@@ -232,9 +233,8 @@
         args:
           - --provider=openshift
           - --openshift-service-account={{ service_name_ab_proxy }}
-          - --config=/{{ service_name_ab_proxy }}/prometheus-alerbuffer-oauth-proxy.yml
+          - --config=/{{ service_name_ab_proxy }}/prometheus-alertbuffer-oauth-proxy.yml
           - --openshift-sar={"namespace":"{{ namespace }}","resource":"deploymentconfigs","name":"{{ service_name_ab }}","verb":"update"}
-          - --skip-auth-regex=^/metrics,/api/datasources,/api/dashboards
         volume_mounts:
           - mount_path: '/etc/tls/private'
             name: "{{ prometheus_alertbuffer_proxy_tls_secret_name }}"

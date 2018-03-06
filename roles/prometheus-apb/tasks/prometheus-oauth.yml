@@ -1,5 +1,5 @@
 ---
-- name: '[PROMETHEUS-GRAFANA-OAUTH][{{ mode | upper }}] Set variables to renderize Service Account template'
+- name: '[PROMETHEUS-OAUTH][{{ mode | upper }}] Set variables to renderize Service Account template'
   set_fact:
     resource_name: "{{ service_name_proxy }}" 
     resource_kind: 'Route'

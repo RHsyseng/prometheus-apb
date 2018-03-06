@@ -30,11 +30,10 @@
 # Test for Alertmanager
 - name: "[PROMETHEUS APB][{{ mode | upper }}] Ensure that Alertmanager is up"
   wait_for:
-    port: "{{ prometheus_alermanager_port }}" 
+    port: "{{ prometheus_alertmanager_port }}" 
     host: "{{ service_name_am }}"
     timeout: 20               
   register: alertmanager_conn       
-  when: state == "present"
   
 - name: "[PROMETHEUS APB][{{ mode | upper }}] Saving Tests results on error"
   asb_save_test_result:
@@ -71,7 +70,6 @@
     host: "{{ service_name_ab_proxy }}"
     timeout: 20               
   register: alertbuffer_conn       
-  when: state == "present"
   
 - name: "[PROMETHEUS APB][{{ mode | upper }}] Saving Tests results on error"
   asb_save_test_result:
