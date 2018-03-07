@@ -16,9 +16,6 @@
     include_tasks: prometheus-oauth.yml
     when: PROMETHEUS_SECURED_DEPLOYMENT | bool
 
-  - name: "[PROMETHEUS APB][MAIN] Deploying Prometheus-AlertManager"
-    include_tasks: prometheus-alertmanager.yml
-
   - name: "[PROMETHEUS APB][MAIN] Deploying Prometheus-Grafana"
     include_tasks: prometheus-grafana-oauth.yml
     when: DEPLOY_GRAFANA | bool
@@ -26,6 +23,9 @@
   - name: "[PROMETHEUS APB][MAIN] Deploying Prometheus-Alertbuffer"
     include_tasks: prometheus-alertbuffer-oauth.yml
     when: DEPLOY_ALERTBUFFER | bool
+
+  - name: "[PROMETHEUS APB][MAIN] Deploying Prometheus-AlertManager"
+    include_tasks: prometheus-alertmanager.yml
   when: mode == 'provision'
 
 - block:

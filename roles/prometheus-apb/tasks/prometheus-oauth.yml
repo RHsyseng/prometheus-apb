@@ -197,7 +197,8 @@
           - --provider=openshift
           - --openshift-service-account={{ service_name_proxy }}
           - --config=/{{ service_name_proxy }}/prometheus-oauth-proxy.yml
-          - --openshift-sar={"namespace":"{{ namespace }}","resource":"deploymentconfigs","name":"{{ service_name }}","verb":"update"}
+          - --openshift-sar={"resource":"namespaces","verb":"get","resourceName":"{{ namespace }}","namespace":"{{ namespace }}"}
+          - --openshift-delegate-urls={"/":{"resource":"namespaces","verb":"get","resourceName":"{{ namespace }}","namespace":"{{ namespace }}"}}
         volume_mounts:
           - mount_path: '/etc/tls/private'
             name: "{{ prometheus_proxy_tls_secret_name }}"

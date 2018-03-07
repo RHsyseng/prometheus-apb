@@ -1,8 +1,13 @@
 global:
-  smtp_smarthost: \'{{ SMTP_HOST }}:{{ SMTP_PORT }}\'
-  smtp_from: \'{{ SMTP_FROM }}\'
-  smtp_auth_username: \'{{ SMTP_AUTH_USER }}\'
-  smtp_auth_password: \'{{ SMTP_AUTH_PASS }}\'
+  smtp_smarthost: '{{ SMTP_HOST }}:{{ SMTP_PORT }}'
+  smtp_from: '{{ SMTP_FROM }}'
+  smtp_auth_username: '{{ SMTP_AUTH_USER }}'
+  smtp_auth_password: '{{ SMTP_AUTH_PASS }}'
+# TODO Uncomment when the alertmanager version gets updated, this is still not supported
+#  http_config:
+#    bearer_token: "{{ prometheus_alertbuffer_sa_token }}"
+#    tls_config:
+#      insecure_skip_verify: true
 
 templates: 
 - '/etc/prometheus-alertmanager-templates/*.tmpl'
@@ -76,5 +81,5 @@ receivers:
 {% if DEPLOY_ALERTBUFFER | bool %}
 - name: alert-buffer-wh
   webhook_configs:
-  - url: http://{{ service_name_ab }}:{{ prometheus_alertbuffer_port }}/topics/alerts
+  - url: http://{{ service_name_ab_proxy }}:{{ prometheus_alertbuffer_proxy_svc_port }}/topics/alerts
 {% endif %}

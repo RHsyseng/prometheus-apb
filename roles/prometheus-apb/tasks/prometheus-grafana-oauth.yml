@@ -199,7 +199,7 @@
           - --provider=openshift
           - --openshift-service-account={{ service_name_graf_proxy }}
           - --config=/{{ service_name_graf_proxy }}/prometheus-grafana-oauth-proxy.yml
-          - --openshift-sar={"namespace":"{{ namespace }}","resource":"deploymentconfigs","name":"{{ service_name_graf }}","verb":"update"}
+          - --openshift-sar={"namespace":"{{ namespace }}","verb":"list","resource":"services"}
           - --skip-auth-regex=^/metrics,/api/datasources,/api/dashboards
         volume_mounts:
           - mount_path: '/etc/tls/private'
@@ -284,7 +284,7 @@
           - --provider=openshift
           - --openshift-service-account={{ service_name_graf_proxy }}
           - --config=/{{ service_name_graf_proxy }}/prometheus-grafana-oauth-proxy.yml
-          - --openshift-sar={"namespace":"{{ namespace }}","resource":"deploymentconfigs","name":"{{ service_name_graf }}","verb":"update"}
+          - --openshift-sar={"namespace":"{{ namespace }}","verb":"list","resource":"services"}
           - --skip-auth-regex=^/metrics,/api/datasources,/api/dashboards
         volume_mounts:
           - mount_path: '/etc/tls/private'
@@ -359,7 +359,7 @@
   set_fact:
     payload_data: "{{ prometheus_grafana_datasource_payload | to_json }}"
   with_items:
-    - { name: 'Prometheus', type: 'prometheus', url: "{{ prometheus_svc.service.spec.cluster_ip }}", token: "{{ prometheus_grafana_sa_token }}" }
+    - { name: 'Prometheus', type: 'prometheus', url: "https://{{ service_name_proxy }}", token: "{{ prometheus_grafana_sa_token }}" }
 
 - debug:
     var: payload_data

@@ -1,4 +1,30 @@
 ---
+- block:
+  - name: "[PROMETHEUS-ALERTMANAGER-OAUTH][{{ mode | upper }}] Recover Alertbuffer ServiceAccount"
+    k8s_v1_service_account:
+      state: "{{ state }}"
+      name: "{{ service_name_ab_proxy }}"
+      namespace: "{{ namespace }}"
+    register: prometheus_alertbuffer_sa
+
+  - name: "[PROMETHEUS-ALERTMANAGER-OAUTH][{{ mode | upper }}] Recover Alertbuffer secret name"
+    set_fact:
+      prometheus_alertbuffer_sa_token_name: "{{ item.name }}"
+    with_list: "{{ prometheus_alertbuffer_sa.service_account.secrets }}"
+    when: "'prometheus-alertbuffer-proxy-token' in item.name"
+
+  - name: "[PROMETHEUS-ALERTMANAGER-OAUTH][{{ mode | upper }}] Recovering Alertbuffer Service Account token"
+    k8s_v1_secret:
+      state: "{{ state }}"
+      name: "{{ prometheus_alertbuffer_sa_token_name }}"
+      namespace: "{{ namespace }}"
+    register: prometheus_alertbuffer_sa_token
+
+  - name: "[PROMETHEUS-ALERTMANAGER-OAUTH][{{ mode | upper }}] Creating a fact with the secret token of Alertbuffer Service Account"
+    set_fact:
+      prometheus_alertbuffer_sa_token: "{{ prometheus_alertbuffer_sa_token.secret.data.token | b64decode }}"
+  when: DEPLOY_ALERTBUFFER | bool
+
 - name: "[PROMETHEUS-ALERTMANAGER][{{ mode | upper }}] Create ImageStream for Prometheus-Alertmanager image"
   openshift_v1_image_stream:
     state: "{{ state }}"
