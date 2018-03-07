@@ -2,6 +2,15 @@
 
 Prometheus APB Changelog
 
+## [1.4] - 2018-03-07
+### Added
+- Added Alertbuffer deployment as a boolean on persistent and ephemeral plan (still not integrated with alertmanager)
+- Added Alertbuffer Tests
+- Added readiness and liveness probes on alertmanager
+
+### Changed
+- Grafana and Alertbuffer addons set to false as default option to deploy 
+
 ## [1.3] - 2018-03-02
 ### Added
 - Added Grafana deployment as a boolean on persistent and ephemeral plan

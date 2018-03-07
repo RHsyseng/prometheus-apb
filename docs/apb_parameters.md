@@ -8,9 +8,14 @@
   - _Description_: 'Deploy Prometheus with Oauth-Proxy sidecar'
 
 - **DEPLOY_GRAFANA**
-  - _Default_: True
+  - _Default_: False
   - _Type_: Bool
   - _Description_: 'Deploy Grafana with Oauth-Proxy sidecar'
+
+- **DEPLOY_ALERTBUFFER**
+  - _Default_: False
+  - _Type_: Bool
+  - _Description_: 'Deploy Alertbuffer with Oauth-Proxy sidecar'
 
 ## Prometheus Alertmanager Variables
 

@@ -7,7 +7,7 @@ COPY ansible.cfg /etc/ansible/
 RUN chmod -R g=u /opt/{ansible,apb}
 USER apb
 
-LABEL "com.redhat.apb.version"="1.3.0"
+LABEL "com.redhat.apb.version"="1.4.0"
 LABEL "com.redhat.apb.spec"=\
 "LS0tCnZlcnNpb246IDEuMApuYW1lOiBwcm9tZXRoZXVzLWFwYgpkZXNjcmlwdGlvbjogRGVwbG95\
 IFByb21ldGhldXMgb24geW91ciBQcm9qZWN0CmJpbmRhYmxlOiBGYWxzZQphc3luYzogb3B0aW9u\

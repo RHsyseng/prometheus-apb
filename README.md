@@ -54,14 +54,14 @@ apb run --project prom-apb-test-01
 - Graphana
 - Add ImageStream to manage tags easily
 - TravisCI/CD Testing
+- AlertBuffer
 
 ## Working on
-
-- AlertBuffer
 
 ## To Do
 
 - Packaging
+- When the alertmanager image gets updated, uncomment on configmap template the http_config section at global
 
 # References
 
