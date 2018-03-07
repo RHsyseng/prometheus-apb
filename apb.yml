@@ -67,7 +67,7 @@ plans:
       ## Grafana Params 
       - name: DEPLOY_GRAFANA
         required: True
-        default: True
+        default: False
         type: bool
         title: Deploy Grafana server with Prometheus as datasource
         display_group: Grafana Config
@@ -75,7 +75,7 @@ plans:
       ## Alertbuffer Params 
       - name: DEPLOY_ALERTBUFFER
         required: True
-        default: True
+        default: False
         type: bool
         title: Deploy Alertbuffer server with Prometheus.
         display_group: Alertbuffer Config
@@ -163,7 +163,7 @@ plans:
       ## Grafana params
       - name: DEPLOY_GRAFANA
         required: True
-        default: True
+        default: False
         type: bool
         title: Deploy Grafana server with Prometheus as datasource
         display_group: Grafana Config
@@ -171,7 +171,7 @@ plans:
       ## Alertbuffer Params 
       - name: DEPLOY_ALERTBUFFER
         required: True
-        default: True
+        default: False
         type: bool
         title: Deploy Alertbuffer server with Prometheus.
         display_group: Alertbuffer Config
